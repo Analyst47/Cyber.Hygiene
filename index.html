@@ -6,18 +6,20 @@
     name="viewport"
     content="width=device-width, initial-scale=1.0"
   />
-  <title>VulnSight // KEV Prioritization Console</title>
+  <title>Rowan ISO Cyber Hygiene</title>
   <meta
     name="description"
-    content="Premium cybersecurity dashboard for parsing XLSX vulnerability exports, validating CISA KEV presence, and prioritizing exploitable risk."
+    content="Rowan ISO Cyber Hygiene - Premium cybersecurity dashboard for parsing XLSX vulnerability exports, validating CISA KEV presence, and prioritizing exploitable risk."
   />
+  <meta name="author" content="Fahim Abrar" />
+  <meta name="creator" content="Fahim Abrar" />
+  <meta name="publisher" content="Rowan ISO Cyber Hygiene" />
+  <meta name="theme-color" content="#07111f" />
 
-  <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
 
-  <!-- SheetJS official standalone browser build -->
   <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 
   <style>
@@ -47,16 +49,23 @@
       --radius-sm:16px;
       --radius-xs:12px;
       --grid-gap:18px;
-      --header-h:88px;
+      --header-h:110px;
     }
 
     *{box-sizing:border-box}
-    html,body{margin:0;padding:0;min-height:100%;background:
-      radial-gradient(circle at 10% 20%, rgba(0,229,255,0.08), transparent 24%),
-      radial-gradient(circle at 90% 10%, rgba(125,98,255,0.12), transparent 24%),
-      radial-gradient(circle at 80% 80%, rgba(255,79,216,0.08), transparent 18%),
-      linear-gradient(180deg,#050c17 0%,#07111f 35%,#081526 100%);
-      color:var(--text);font-family:'Inter',system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;overflow-x:hidden;}
+    html,body{
+      margin:0;
+      padding:0;
+      min-height:100%;
+      background:
+        radial-gradient(circle at 10% 20%, rgba(0,229,255,0.08), transparent 24%),
+        radial-gradient(circle at 90% 10%, rgba(125,98,255,0.12), transparent 24%),
+        radial-gradient(circle at 80% 80%, rgba(255,79,216,0.08), transparent 18%),
+        linear-gradient(180deg,#050c17 0%,#07111f 35%,#081526 100%);
+      color:var(--text);
+      font-family:'Inter',system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+      overflow-x:hidden;
+    }
 
     body::before{
       content:"";
@@ -110,7 +119,8 @@
     .panel,
     .hero,
     .datatable-wrap,
-    .detail-card{
+    .detail-card,
+    .credit-banner{
       background:linear-gradient(180deg, rgba(16,29,53,0.72), rgba(7,14,27,0.72));
       border:1px solid var(--line);
       box-shadow:var(--shadow);
@@ -119,13 +129,14 @@
     }
 
     .brand{
-      border-radius:26px;
+      border-radius:30px;
       display:flex;
       align-items:center;
       justify-content:space-between;
-      padding:0 24px;
+      padding:20px 26px;
       position:relative;
       overflow:hidden;
+      min-height:122px;
     }
 
     .brand::before{
@@ -136,20 +147,34 @@
       pointer-events:none;
     }
 
-    .brand-left{display:flex;align-items:center;gap:18px;position:relative;z-index:1}
+    .brand-left{
+      display:flex;
+      align-items:center;
+      gap:20px;
+      position:relative;
+      z-index:1;
+    }
+
     .brand-mark{
-      width:54px;height:54px;border-radius:18px;
+      width:60px;
+      height:60px;
+      border-radius:20px;
       background:
         radial-gradient(circle at 30% 30%, rgba(255,255,255,.28), transparent 32%),
         linear-gradient(145deg, rgba(0,229,255,.24), rgba(125,98,255,.30));
       border:1px solid rgba(255,255,255,.18);
-      display:grid;place-items:center;
+      display:grid;
+      place-items:center;
       box-shadow:0 0 0 1px rgba(255,255,255,.04) inset, 0 12px 30px rgba(0,229,255,.18);
       position:relative;
+      flex:0 0 auto;
     }
+
     .brand-mark::before{
       content:"";
-      width:26px;height:26px;border-radius:9px;
+      width:28px;
+      height:28px;
+      border-radius:9px;
       background:linear-gradient(135deg,var(--cyan),var(--violet));
       box-shadow:0 0 28px rgba(0,229,255,.35);
       transform:rotate(45deg);
@@ -162,7 +187,7 @@
       letter-spacing:.18em;
       font-size:11px;
       font-weight:700;
-      margin-bottom:6px;
+      margin-bottom:8px;
     }
 
     .title{
@@ -174,21 +199,41 @@
       margin:0;
     }
 
+    .main-site-title{
+      font-size:56px;
+      line-height:0.95;
+      letter-spacing:-0.04em;
+      font-weight:800;
+      margin:0;
+      background:linear-gradient(135deg, #ffffff 0%, #b8d7ff 38%, #8cf3ff 68%, #c5b8ff 100%);
+      -webkit-background-clip:text;
+      background-clip:text;
+      color:transparent;
+      text-shadow:0 0 28px rgba(0,229,255,0.12);
+    }
+
     .subtitle{
       color:var(--muted);
       font-size:13px;
-      margin-top:6px;
+      margin-top:8px;
+      max-width:850px;
     }
 
     .brand-status{
-      display:flex;align-items:center;gap:12px;
-      position:relative;z-index:1;
+      display:flex;
+      align-items:center;
+      gap:12px;
+      position:relative;
+      z-index:1;
       color:var(--muted);
       font-size:13px;
+      white-space:nowrap;
     }
 
     .pulse{
-      width:11px;height:11px;border-radius:50%;
+      width:11px;
+      height:11px;
+      border-radius:50%;
       background:var(--green);
       box-shadow:0 0 0 0 rgba(60,240,167,.65);
       animation:pulse 1.8s infinite;
@@ -224,9 +269,52 @@
     }
 
     .chip .dot{
-      width:8px;height:8px;border-radius:50%;
+      width:8px;
+      height:8px;
+      border-radius:50%;
       background:linear-gradient(135deg,var(--cyan),var(--violet));
       box-shadow:0 0 12px rgba(0,229,255,.35);
+    }
+
+    .credit-banner{
+      border-radius:24px;
+      margin-bottom:20px;
+      padding:16px 20px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:16px;
+      background:
+        linear-gradient(180deg, rgba(10,20,38,.88), rgba(7,14,26,.84)),
+        radial-gradient(circle at left, rgba(0,229,255,.08), transparent 26%);
+    }
+
+    .credit-left{
+      display:grid;
+      gap:4px;
+    }
+
+    .credit-left strong{
+      font-size:14px;
+      letter-spacing:.08em;
+      text-transform:uppercase;
+      color:#fff;
+    }
+
+    .credit-left span{
+      color:var(--muted);
+      font-size:13px;
+      line-height:1.6;
+    }
+
+    .credit-badge{
+      padding:10px 14px;
+      border-radius:999px;
+      background:rgba(255,255,255,.045);
+      border:1px solid rgba(255,255,255,.08);
+      color:#dce8ff;
+      font-size:12px;
+      white-space:nowrap;
     }
 
     .hero{
@@ -309,7 +397,11 @@
     .mini-stat::after{
       content:"";
       position:absolute;
-      width:120px;height:120px;right:-24px;top:-36px;border-radius:50%;
+      width:120px;
+      height:120px;
+      right:-24px;
+      top:-36px;
+      border-radius:50%;
       background:radial-gradient(circle, rgba(0,229,255,.14), transparent 66%);
       filter:blur(4px);
     }
@@ -369,6 +461,8 @@
       margin:0 0 6px;
       font-size:17px;
       letter-spacing:.01em;
+      position:relative;
+      z-index:1;
     }
 
     .panel-sub{
@@ -376,6 +470,8 @@
       margin:0 0 18px;
       font-size:13px;
       line-height:1.6;
+      position:relative;
+      z-index:1;
     }
 
     .upload-zone{
@@ -401,12 +497,18 @@
     }
 
     .upload-zone input{
-      position:absolute; inset:0; opacity:0; cursor:pointer;
+      position:absolute;
+      inset:0;
+      opacity:0;
+      cursor:pointer;
     }
 
     .upload-icon{
-      width:78px;height:78px;border-radius:24px;
-      display:grid;place-items:center;
+      width:78px;
+      height:78px;
+      border-radius:24px;
+      display:grid;
+      place-items:center;
       margin:0 auto 16px;
       background:linear-gradient(135deg, rgba(0,229,255,.18), rgba(125,98,255,.22));
       border:1px solid rgba(255,255,255,.10);
@@ -490,7 +592,9 @@
     }
 
     .switch{
-      display:flex;align-items:center;justify-content:space-between;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
       gap:16px;
       padding:12px 14px;
       border-radius:16px;
@@ -499,7 +603,8 @@
     }
 
     .switch .meta{
-      display:grid;gap:4px;
+      display:grid;
+      gap:4px;
     }
 
     .switch .meta strong{
@@ -508,11 +613,14 @@
     }
 
     .switch .meta span{
-      font-size:12px;color:var(--muted);
+      font-size:12px;
+      color:var(--muted);
     }
 
     .toggle{
-      width:56px;height:32px;border-radius:999px;
+      width:56px;
+      height:32px;
+      border-radius:999px;
       background:rgba(255,255,255,.10);
       position:relative;
       cursor:pointer;
@@ -523,8 +631,12 @@
 
     .toggle::before{
       content:"";
-      position:absolute;left:4px;top:4px;
-      width:22px;height:22px;border-radius:50%;
+      position:absolute;
+      left:4px;
+      top:4px;
+      width:22px;
+      height:22px;
+      border-radius:50%;
       background:#fff;
       transition:.2s ease;
       box-shadow:0 8px 16px rgba(0,0,0,.20);
@@ -565,7 +677,10 @@
     .stat-card::before{
       content:"";
       position:absolute;
-      left:-16px;top:-16px;width:120px;height:120px;
+      left:-16px;
+      top:-16px;
+      width:120px;
+      height:120px;
       background:radial-gradient(circle, rgba(0,229,255,.15), transparent 68%);
       border-radius:50%;
       filter:blur(6px);
@@ -627,8 +742,11 @@
     }
 
     .insight-rank{
-      width:36px;height:36px;border-radius:14px;
-      display:grid;place-items:center;
+      width:36px;
+      height:36px;
+      border-radius:14px;
+      display:grid;
+      place-items:center;
       font-weight:800;
       background:linear-gradient(135deg, rgba(0,229,255,.18), rgba(125,98,255,.2));
       border:1px solid rgba(255,255,255,.08);
@@ -645,7 +763,10 @@
     }
 
     .tags{
-      display:flex;gap:8px;flex-wrap:wrap;margin-top:10px
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      margin-top:10px
     }
 
     .tag{
@@ -686,9 +807,11 @@
 
     .bar-label{color:#dbe7ff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     .bar-track{
-      height:14px;border-radius:999px;
+      height:14px;
+      border-radius:999px;
       background:rgba(255,255,255,.06);
-      overflow:hidden;border:1px solid rgba(255,255,255,.05);
+      overflow:hidden;
+      border:1px solid rgba(255,255,255,.05);
       position:relative;
     }
 
@@ -800,12 +923,17 @@
     .pill.violet{background:rgba(125,98,255,.12);color:#c6bbff;border-color:rgba(125,98,255,.18)}
 
     .row-actions{
-      display:flex;gap:8px;align-items:center
+      display:flex;
+      gap:8px;
+      align-items:center
     }
 
     .icon-btn{
-      width:36px;height:36px;border-radius:12px;
-      display:grid;place-items:center;
+      width:36px;
+      height:36px;
+      border-radius:12px;
+      display:grid;
+      place-items:center;
       background:rgba(255,255,255,.045);
       border:1px solid rgba(255,255,255,.08);
       color:#fff;
@@ -818,7 +946,8 @@
     }
 
     .detail-overlay{
-      position:fixed; inset:0;
+      position:fixed;
+      inset:0;
       background:rgba(2,7,15,.58);
       backdrop-filter:blur(10px);
       -webkit-backdrop-filter:blur(10px);
@@ -840,7 +969,10 @@
     }
 
     .detail-head{
-      display:flex;justify-content:space-between;gap:16px;align-items:flex-start;
+      display:flex;
+      justify-content:space-between;
+      gap:16px;
+      align-items:flex-start;
       margin-bottom:18px;
     }
 
@@ -851,7 +983,11 @@
     }
 
     .detail-title p{
-      margin:0;color:var(--muted);font-size:13px;line-height:1.7;max-width:780px
+      margin:0;
+      color:var(--muted);
+      font-size:13px;
+      line-height:1.7;
+      max-width:780px
     }
 
     .detail-grid{
@@ -906,23 +1042,50 @@
       line-height:1.7;
     }
 
+    .footer-credits{
+      margin-top:20px;
+      border-top:1px solid rgba(255,255,255,.08);
+      padding-top:14px;
+      color:var(--muted);
+      font-size:12px;
+      line-height:1.8;
+      display:flex;
+      justify-content:space-between;
+      gap:16px;
+      flex-wrap:wrap;
+    }
+
     .legend{
-      display:flex;gap:10px;flex-wrap:wrap;margin-top:12px
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      margin-top:12px
     }
 
     .legend span{
-      display:inline-flex;align-items:center;gap:8px;
-      color:var(--muted);font-size:12px;padding:8px 10px;
-      border-radius:999px;background:rgba(255,255,255,.035);
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      color:var(--muted);
+      font-size:12px;
+      padding:8px 10px;
+      border-radius:999px;
+      background:rgba(255,255,255,.035);
       border:1px solid rgba(255,255,255,.06);
     }
 
     .legend i{
-      width:10px;height:10px;border-radius:50%;display:inline-block
+      width:10px;
+      height:10px;
+      border-radius:50%;
+      display:inline-block
     }
 
     .statusline{
-      display:flex;gap:12px;flex-wrap:wrap;margin-top:12px
+      display:flex;
+      gap:12px;
+      flex-wrap:wrap;
+      margin-top:12px
     }
 
     .status-card{
@@ -958,12 +1121,13 @@
 
     @media (max-width: 900px){
       .app{width:min(100% - 20px, 1600px)}
-      .topbar{grid-template-columns:1fr}
+      .topbar{grid-template-columns:1fr;height:auto}
       .topbar-actions{min-width:0;justify-content:flex-start;flex-wrap:wrap}
       .stats{grid-template-columns:repeat(2,minmax(0,1fr))}
       .toolbar{grid-template-columns:1fr 1fr}
       .detail-grid{grid-template-columns:1fr}
       .detail-head{flex-direction:column}
+      .main-site-title{font-size:42px}
     }
 
     @media (max-width: 640px){
@@ -972,7 +1136,23 @@
       .btn-row{grid-template-columns:1fr}
       .hero h2{font-size:28px}
       .title{font-size:22px}
-      .brand{padding:16px;align-items:flex-start;gap:12px;flex-direction:column}
+      .main-site-title{
+        font-size:32px;
+        line-height:1.02;
+      }
+      .brand{
+        padding:18px;
+        align-items:flex-start;
+        gap:12px;
+        flex-direction:column;
+      }
+      .credit-banner{
+        flex-direction:column;
+        align-items:flex-start;
+      }
+      .footer-credits{
+        flex-direction:column;
+      }
     }
   </style>
 </head>
@@ -984,8 +1164,8 @@
           <div class="brand-mark"></div>
           <div>
             <div class="eyebrow">Advanced Exposure Intelligence</div>
-            <h1 class="title">VulnSight // KEV Prioritization Console</h1>
-            <div class="subtitle">Premium threat operations dashboard for exploit-driven vulnerability triage and executive-grade visibility.</div>
+            <h1 class="title main-site-title">Rowan ISO Cyber Hygiene</h1>
+            <div class="subtitle">Premium threat operations dashboard for exploit-driven vulnerability triage, KEV validation, and executive-grade cyber hygiene visibility.</div>
           </div>
         </div>
         <div class="brand-status">
@@ -1000,6 +1180,14 @@
         <div class="chip"><span class="dot"></span> GitHub Pages ready</div>
       </div>
     </div>
+
+    <section class="credit-banner">
+      <div class="credit-left">
+        <strong>Dashboard Attribution</strong>
+        <span>Dashboard Creator: Fahim Abrar • Supervised by Wiilliam Couse</span>
+      </div>
+      <div class="credit-badge">Rowan ISO Cyber Hygiene Intelligence Surface</div>
+    </section>
 
     <section class="hero">
       <div class="hero-grid">
@@ -1247,6 +1435,11 @@
           <div class="footer-note" id="tableFootnote">
             The active table will display the rows that pass your current filter model, and each record can be expanded for deep technical and remediation detail.
           </div>
+
+          <div class="footer-credits">
+            <div>Rowan ISO Cyber Hygiene</div>
+            <div>Dashboard Creator: Fahim Abrar • Supervised by Wiilliam Couse</div>
+          </div>
         </section>
       </main>
     </div>
@@ -1377,6 +1570,8 @@
       statHighRiskMeta: el("statHighRiskMeta")
     };
 
+    const defaultDocumentTitle = "Rowan ISO Cyber Hygiene";
+
     function normalizeHeader(header){
       return String(header ?? "")
         .trim()
@@ -1451,9 +1646,14 @@
       refs.appStatus.textContent = message;
     }
 
+    function setDocumentTitle(suffix = ""){
+      document.title = suffix ? `${defaultDocumentTitle} • ${suffix}` : defaultDocumentTitle;
+    }
+
     async function fetchKevData(){
       refs.kevInfo.textContent = "Fetching KEV dataset...";
       setStatus("Loading KEV catalog");
+      setDocumentTitle("Loading KEV");
       for (const url of KEV_URLS){
         try{
           const res = await fetch(url, {cache:"no-store"});
@@ -1475,6 +1675,7 @@
           };
           refs.kevInfo.textContent = `Loaded ${vulnerabilities.length.toLocaleString()} KEV entries. Catalog version: ${state.kevMeta.version}.`;
           setStatus("KEV catalog loaded");
+          setDocumentTitle();
           return true;
         }catch(err){
           console.warn("KEV fetch failed for", url, err);
@@ -1483,6 +1684,7 @@
       state.kevLoaded = false;
       refs.kevInfo.textContent = "KEV fetch failed. Filters can still run, but KEV validation will be unavailable until retry succeeds.";
       setStatus("KEV catalog unavailable");
+      setDocumentTitle("KEV unavailable");
       return false;
     }
 
@@ -1557,6 +1759,7 @@
       populateProtocolFilter(rows);
       applyFilters();
       setStatus("Workbook parsed successfully");
+      setDocumentTitle(fileName);
     }
 
     function cryptoRandomId(){
@@ -1909,7 +2112,7 @@
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `vulnsight_filtered_${new Date().toISOString().slice(0,19).replace(/[:T]/g,"-")}.csv`;
+      a.download = `rowan_iso_cyber_hygiene_${new Date().toISOString().slice(0,19).replace(/[:T]/g,"-")}.csv`;
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -1933,7 +2136,9 @@
       ).join("\n");
 
       const text =
-`VulnSight Summary
+`Rowan ISO Cyber Hygiene Summary
+Dashboard Creator: Fahim Abrar
+Supervised by Wiilliam Couse
 Workbook: ${state.workbookName || "N/A"}
 Sheets: ${state.workbookSheets.length}
 Rows ingested: ${total}
@@ -1984,6 +2189,7 @@ ${top || "No matching findings."}`;
       refs.fileInput.value = "";
       refs.workbookInfo.textContent = "No file loaded yet.";
       setStatus(state.kevLoaded ? "KEV catalog loaded, awaiting dataset upload" : "Awaiting dataset upload");
+      setDocumentTitle();
       renderAll();
       refs.resultsTableBody.innerHTML = `<tr><td colspan="16" class="empty">No data loaded.</td></tr>`;
       refs.topFindingsList.innerHTML = `<div class="empty">Upload a workbook to populate prioritized findings.</div>`;
@@ -2045,11 +2251,13 @@ ${top || "No matching findings."}`;
       populateProtocolFilter(state.rawRows);
       applyFilters();
       setStatus("Demo dataset loaded");
+      setDocumentTitle("Demo dataset");
     }
 
     async function handleFile(file){
       if (!file) return;
       setStatus("Reading workbook");
+      setDocumentTitle("Reading workbook");
       refs.workbookInfo.textContent = `Reading ${file.name}...`;
       try{
         const data = await file.arrayBuffer();
@@ -2059,6 +2267,7 @@ ${top || "No matching findings."}`;
         console.error(err);
         refs.workbookInfo.textContent = `Failed to parse ${file.name}. Ensure it is a valid Excel workbook.`;
         setStatus("Workbook parse failed");
+        setDocumentTitle("Parse failed");
         alert("Unable to parse the workbook. Please confirm the file is a valid .xlsx or .xls.");
       }
     }
@@ -2148,8 +2357,10 @@ ${top || "No matching findings."}`;
 
     async function init(){
       bindEvents();
+      setDocumentTitle();
       await fetchKevData();
       setStatus(state.kevLoaded ? "KEV catalog loaded, awaiting dataset upload" : "Awaiting dataset upload");
+      setDocumentTitle();
       renderAll();
     }
 
@@ -2157,3 +2368,4 @@ ${top || "No matching findings."}`;
   </script>
 </body>
 </html>
+
