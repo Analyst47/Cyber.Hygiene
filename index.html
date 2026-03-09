@@ -1,0 +1,2159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  />
+  <title>VulnSight // KEV Prioritization Console</title>
+  <meta
+    name="description"
+    content="Premium cybersecurity dashboard for parsing XLSX vulnerability exports, validating CISA KEV presence, and prioritizing exploitable risk."
+  />
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+
+  <!-- SheetJS official standalone browser build -->
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+
+  <style>
+    :root{
+      --bg:#07111f;
+      --bg-2:#0a1628;
+      --bg-3:#0f1d35;
+      --panel:rgba(10,19,36,0.72);
+      --panel-2:rgba(12,25,46,0.88);
+      --line:rgba(138,165,255,0.16);
+      --line-2:rgba(0,229,255,0.20);
+      --text:#f3f7ff;
+      --muted:#94a8c8;
+      --muted-2:#6e84a8;
+      --cyan:#00e5ff;
+      --cyan-2:#6ef2ff;
+      --blue:#4d7cff;
+      --violet:#7d62ff;
+      --pink:#ff4fd8;
+      --green:#3cf0a7;
+      --amber:#ffca5a;
+      --red:#ff667d;
+      --shadow:0 20px 60px rgba(0,0,0,0.45);
+      --shadow-soft:0 10px 30px rgba(0,0,0,0.25);
+      --glass:blur(18px);
+      --radius:24px;
+      --radius-sm:16px;
+      --radius-xs:12px;
+      --grid-gap:18px;
+      --header-h:88px;
+    }
+
+    *{box-sizing:border-box}
+    html,body{margin:0;padding:0;min-height:100%;background:
+      radial-gradient(circle at 10% 20%, rgba(0,229,255,0.08), transparent 24%),
+      radial-gradient(circle at 90% 10%, rgba(125,98,255,0.12), transparent 24%),
+      radial-gradient(circle at 80% 80%, rgba(255,79,216,0.08), transparent 18%),
+      linear-gradient(180deg,#050c17 0%,#07111f 35%,#081526 100%);
+      color:var(--text);font-family:'Inter',system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;overflow-x:hidden;}
+
+    body::before{
+      content:"";
+      position:fixed;
+      inset:0;
+      pointer-events:none;
+      background-image:
+        linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+      background-size:42px 42px;
+      mask-image:linear-gradient(to bottom, rgba(255,255,255,.35), rgba(255,255,255,.08));
+      opacity:.35;
+    }
+
+    body::after{
+      content:"";
+      position:fixed;
+      inset:-30%;
+      background:
+        conic-gradient(from 120deg, rgba(0,229,255,0.06), transparent 25%, rgba(125,98,255,0.08), transparent 55%, rgba(255,79,216,0.05), transparent 75%);
+      filter:blur(80px);
+      animation:drift 18s linear infinite;
+      pointer-events:none;
+      opacity:.8;
+    }
+
+    @keyframes drift{
+      0%{transform:rotate(0deg) scale(1)}
+      50%{transform:rotate(180deg) scale(1.08)}
+      100%{transform:rotate(360deg) scale(1)}
+    }
+
+    .app{
+      width:min(1600px, calc(100% - 36px));
+      margin:26px auto 40px;
+      position:relative;
+      z-index:2;
+    }
+
+    .topbar{
+      height:var(--header-h);
+      display:grid;
+      grid-template-columns:1.2fr auto;
+      gap:18px;
+      align-items:stretch;
+      margin-bottom:20px;
+    }
+
+    .brand,
+    .topbar-actions,
+    .panel,
+    .hero,
+    .datatable-wrap,
+    .detail-card{
+      background:linear-gradient(180deg, rgba(16,29,53,0.72), rgba(7,14,27,0.72));
+      border:1px solid var(--line);
+      box-shadow:var(--shadow);
+      backdrop-filter:var(--glass);
+      -webkit-backdrop-filter:var(--glass);
+    }
+
+    .brand{
+      border-radius:26px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      padding:0 24px;
+      position:relative;
+      overflow:hidden;
+    }
+
+    .brand::before{
+      content:"";
+      position:absolute;
+      inset:-2px;
+      background:linear-gradient(135deg, rgba(0,229,255,0.22), transparent 28%, transparent 62%, rgba(125,98,255,0.22));
+      pointer-events:none;
+    }
+
+    .brand-left{display:flex;align-items:center;gap:18px;position:relative;z-index:1}
+    .brand-mark{
+      width:54px;height:54px;border-radius:18px;
+      background:
+        radial-gradient(circle at 30% 30%, rgba(255,255,255,.28), transparent 32%),
+        linear-gradient(145deg, rgba(0,229,255,.24), rgba(125,98,255,.30));
+      border:1px solid rgba(255,255,255,.18);
+      display:grid;place-items:center;
+      box-shadow:0 0 0 1px rgba(255,255,255,.04) inset, 0 12px 30px rgba(0,229,255,.18);
+      position:relative;
+    }
+    .brand-mark::before{
+      content:"";
+      width:26px;height:26px;border-radius:9px;
+      background:linear-gradient(135deg,var(--cyan),var(--violet));
+      box-shadow:0 0 28px rgba(0,229,255,.35);
+      transform:rotate(45deg);
+      display:block;
+    }
+
+    .eyebrow{
+      color:var(--cyan-2);
+      text-transform:uppercase;
+      letter-spacing:.18em;
+      font-size:11px;
+      font-weight:700;
+      margin-bottom:6px;
+    }
+
+    .title{
+      font-family:'Space Grotesk',sans-serif;
+      font-size:28px;
+      font-weight:700;
+      letter-spacing:.02em;
+      line-height:1;
+      margin:0;
+    }
+
+    .subtitle{
+      color:var(--muted);
+      font-size:13px;
+      margin-top:6px;
+    }
+
+    .brand-status{
+      display:flex;align-items:center;gap:12px;
+      position:relative;z-index:1;
+      color:var(--muted);
+      font-size:13px;
+    }
+
+    .pulse{
+      width:11px;height:11px;border-radius:50%;
+      background:var(--green);
+      box-shadow:0 0 0 0 rgba(60,240,167,.65);
+      animation:pulse 1.8s infinite;
+    }
+
+    @keyframes pulse{
+      0%{box-shadow:0 0 0 0 rgba(60,240,167,.55)}
+      70%{box-shadow:0 0 0 14px rgba(60,240,167,0)}
+      100%{box-shadow:0 0 0 0 rgba(60,240,167,0)}
+    }
+
+    .topbar-actions{
+      border-radius:26px;
+      padding:14px 18px;
+      display:flex;
+      align-items:center;
+      gap:12px;
+      justify-content:flex-end;
+      min-width:320px;
+    }
+
+    .chip{
+      border:1px solid rgba(255,255,255,.08);
+      background:rgba(255,255,255,.04);
+      color:var(--muted);
+      padding:10px 14px;
+      border-radius:999px;
+      font-size:12px;
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      white-space:nowrap;
+    }
+
+    .chip .dot{
+      width:8px;height:8px;border-radius:50%;
+      background:linear-gradient(135deg,var(--cyan),var(--violet));
+      box-shadow:0 0 12px rgba(0,229,255,.35);
+    }
+
+    .hero{
+      border-radius:32px;
+      padding:26px;
+      position:relative;
+      overflow:hidden;
+      margin-bottom:20px;
+    }
+
+    .hero::before{
+      content:"";
+      position:absolute;
+      inset:0;
+      background:
+        radial-gradient(circle at 0% 0%, rgba(0,229,255,.10), transparent 28%),
+        radial-gradient(circle at 100% 0%, rgba(125,98,255,.12), transparent 30%),
+        linear-gradient(135deg, rgba(255,255,255,.03), transparent 45%);
+      pointer-events:none;
+    }
+
+    .hero-grid{
+      display:grid;
+      grid-template-columns:1.25fr .75fr;
+      gap:20px;
+      position:relative;
+      z-index:1;
+    }
+
+    .hero h2{
+      margin:0 0 14px;
+      font-size:34px;
+      line-height:1.05;
+      font-family:'Space Grotesk',sans-serif;
+      max-width:760px;
+    }
+
+    .hero p{
+      margin:0;
+      color:var(--muted);
+      max-width:880px;
+      line-height:1.7;
+      font-size:14px;
+    }
+
+    .hero-badges{
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+      margin-top:18px;
+    }
+
+    .hero-badge{
+      padding:10px 14px;
+      border-radius:999px;
+      background:rgba(255,255,255,.04);
+      border:1px solid rgba(255,255,255,.08);
+      color:#d7e5ff;
+      font-size:12px;
+      letter-spacing:.02em;
+    }
+
+    .hero-side{
+      display:grid;
+      gap:14px;
+      align-content:start;
+    }
+
+    .mini-stat{
+      border-radius:22px;
+      padding:18px;
+      background:linear-gradient(180deg, rgba(255,255,255,.045), rgba(255,255,255,.02));
+      border:1px solid rgba(255,255,255,.08);
+      box-shadow:var(--shadow-soft);
+      min-height:114px;
+      position:relative;
+      overflow:hidden;
+    }
+
+    .mini-stat::after{
+      content:"";
+      position:absolute;
+      width:120px;height:120px;right:-24px;top:-36px;border-radius:50%;
+      background:radial-gradient(circle, rgba(0,229,255,.14), transparent 66%);
+      filter:blur(4px);
+    }
+
+    .mini-label{
+      color:var(--muted);
+      font-size:12px;
+      text-transform:uppercase;
+      letter-spacing:.14em;
+      margin-bottom:10px;
+    }
+
+    .mini-value{
+      font-size:28px;
+      font-weight:800;
+      letter-spacing:-.03em;
+      margin-bottom:8px;
+    }
+
+    .mini-meta{
+      color:#d8e5ff;
+      font-size:13px;
+      line-height:1.5;
+    }
+
+    .layout{
+      display:grid;
+      grid-template-columns:340px 1fr;
+      gap:20px;
+      align-items:start;
+    }
+
+    .sidebar{
+      display:grid;
+      gap:20px;
+      position:sticky;
+      top:16px;
+    }
+
+    .panel{
+      border-radius:28px;
+      padding:20px;
+      position:relative;
+      overflow:hidden;
+    }
+
+    .panel::before{
+      content:"";
+      position:absolute;
+      inset:0;
+      background:linear-gradient(180deg, rgba(255,255,255,.025), transparent 22%);
+      pointer-events:none;
+    }
+
+    .panel-title{
+      font-family:'Space Grotesk',sans-serif;
+      margin:0 0 6px;
+      font-size:17px;
+      letter-spacing:.01em;
+    }
+
+    .panel-sub{
+      color:var(--muted);
+      margin:0 0 18px;
+      font-size:13px;
+      line-height:1.6;
+    }
+
+    .upload-zone{
+      position:relative;
+      border:1.5px dashed rgba(0,229,255,.30);
+      border-radius:24px;
+      min-height:240px;
+      padding:20px;
+      display:grid;
+      place-items:center;
+      text-align:center;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,.01)),
+        radial-gradient(circle at top, rgba(0,229,255,.08), transparent 45%);
+      transition:.25s ease;
+      overflow:hidden;
+    }
+
+    .upload-zone.drag{
+      transform:translateY(-2px);
+      border-color:rgba(0,229,255,.56);
+      box-shadow:0 0 0 1px rgba(0,229,255,.15) inset, 0 20px 40px rgba(0,229,255,.08);
+    }
+
+    .upload-zone input{
+      position:absolute; inset:0; opacity:0; cursor:pointer;
+    }
+
+    .upload-icon{
+      width:78px;height:78px;border-radius:24px;
+      display:grid;place-items:center;
+      margin:0 auto 16px;
+      background:linear-gradient(135deg, rgba(0,229,255,.18), rgba(125,98,255,.22));
+      border:1px solid rgba(255,255,255,.10);
+      box-shadow:0 18px 38px rgba(0,0,0,.26), 0 0 24px rgba(0,229,255,.10);
+      font-size:32px;
+    }
+
+    .upload-title{
+      margin:0 0 8px;
+      font-size:18px;
+      font-weight:700;
+      letter-spacing:.01em;
+    }
+
+    .upload-copy{
+      margin:0 auto;
+      max-width:250px;
+      color:var(--muted);
+      font-size:13px;
+      line-height:1.7;
+    }
+
+    .btn-row{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:10px;
+      margin-top:14px;
+    }
+
+    button, .btn{
+      border:none;
+      cursor:pointer;
+      border-radius:16px;
+      padding:13px 16px;
+      font-weight:700;
+      font-family:inherit;
+      transition:.22s ease;
+      letter-spacing:.01em;
+    }
+
+    .btn-primary{
+      color:#04111e;
+      background:linear-gradient(135deg, var(--cyan), #97f7ff);
+      box-shadow:0 10px 24px rgba(0,229,255,.22);
+    }
+
+    .btn-primary:hover{transform:translateY(-1px);filter:brightness(1.04)}
+    .btn-secondary{
+      color:var(--text);
+      background:rgba(255,255,255,.055);
+      border:1px solid rgba(255,255,255,.08);
+    }
+    .btn-secondary:hover{background:rgba(255,255,255,.085)}
+
+    .stack{display:grid;gap:12px}
+    .field{display:grid;gap:8px}
+    .field label{
+      font-size:12px;
+      color:var(--muted);
+      text-transform:uppercase;
+      letter-spacing:.14em;
+      font-weight:700;
+    }
+
+    .input, select{
+      width:100%;
+      background:rgba(255,255,255,.045);
+      color:var(--text);
+      border:1px solid rgba(255,255,255,.08);
+      border-radius:16px;
+      padding:13px 14px;
+      outline:none;
+      font:inherit;
+      transition:border-color .2s ease, box-shadow .2s ease, background .2s ease;
+    }
+
+    .input:focus, select:focus{
+      border-color:rgba(0,229,255,.42);
+      box-shadow:0 0 0 4px rgba(0,229,255,.08);
+      background:rgba(255,255,255,.06);
+    }
+
+    .switch{
+      display:flex;align-items:center;justify-content:space-between;
+      gap:16px;
+      padding:12px 14px;
+      border-radius:16px;
+      background:rgba(255,255,255,.04);
+      border:1px solid rgba(255,255,255,.07);
+    }
+
+    .switch .meta{
+      display:grid;gap:4px;
+    }
+
+    .switch .meta strong{
+      font-size:14px;
+      font-weight:700;
+    }
+
+    .switch .meta span{
+      font-size:12px;color:var(--muted);
+    }
+
+    .toggle{
+      width:56px;height:32px;border-radius:999px;
+      background:rgba(255,255,255,.10);
+      position:relative;
+      cursor:pointer;
+      border:1px solid rgba(255,255,255,.09);
+      transition:.2s ease;
+      flex:0 0 auto;
+    }
+
+    .toggle::before{
+      content:"";
+      position:absolute;left:4px;top:4px;
+      width:22px;height:22px;border-radius:50%;
+      background:#fff;
+      transition:.2s ease;
+      box-shadow:0 8px 16px rgba(0,0,0,.20);
+    }
+
+    .toggle.active{
+      background:linear-gradient(135deg, rgba(0,229,255,.55), rgba(125,98,255,.55));
+      box-shadow:0 0 18px rgba(0,229,255,.15);
+    }
+
+    .toggle.active::before{
+      left:28px;
+      background:#e9ffff;
+    }
+
+    .main{
+      display:grid;
+      gap:20px;
+    }
+
+    .stats{
+      display:grid;
+      grid-template-columns:repeat(5, minmax(0,1fr));
+      gap:16px;
+    }
+
+    .stat-card{
+      border-radius:26px;
+      padding:18px 18px 16px;
+      background:linear-gradient(180deg, rgba(17,31,58,.85), rgba(8,16,30,.88));
+      border:1px solid rgba(255,255,255,.08);
+      box-shadow:var(--shadow);
+      position:relative;
+      overflow:hidden;
+      min-height:140px;
+    }
+
+    .stat-card::before{
+      content:"";
+      position:absolute;
+      left:-16px;top:-16px;width:120px;height:120px;
+      background:radial-gradient(circle, rgba(0,229,255,.15), transparent 68%);
+      border-radius:50%;
+      filter:blur(6px);
+    }
+
+    .stat-card:nth-child(2)::before{background:radial-gradient(circle, rgba(125,98,255,.18), transparent 68%)}
+    .stat-card:nth-child(3)::before{background:radial-gradient(circle, rgba(60,240,167,.18), transparent 68%)}
+    .stat-card:nth-child(4)::before{background:radial-gradient(circle, rgba(255,202,90,.18), transparent 68%)}
+    .stat-card:nth-child(5)::before{background:radial-gradient(circle, rgba(255,79,216,.18), transparent 68%)}
+
+    .stat-label{
+      color:var(--muted);
+      font-size:12px;
+      letter-spacing:.14em;
+      text-transform:uppercase;
+      margin-bottom:12px;
+      position:relative;
+      z-index:1;
+    }
+
+    .stat-value{
+      font-size:34px;
+      font-weight:900;
+      letter-spacing:-.04em;
+      position:relative;
+      z-index:1;
+    }
+
+    .stat-foot{
+      margin-top:10px;
+      color:#d4e0f5;
+      font-size:13px;
+      line-height:1.5;
+      position:relative;
+      z-index:1;
+    }
+
+    .insight-grid{
+      display:grid;
+      grid-template-columns:1.05fr .95fr;
+      gap:20px;
+    }
+
+    .insight-list{
+      display:grid;
+      gap:12px;
+      margin-top:12px;
+    }
+
+    .insight-item{
+      display:grid;
+      grid-template-columns:auto 1fr auto;
+      gap:14px;
+      align-items:center;
+      padding:14px;
+      border-radius:18px;
+      background:rgba(255,255,255,.035);
+      border:1px solid rgba(255,255,255,.06);
+    }
+
+    .insight-rank{
+      width:36px;height:36px;border-radius:14px;
+      display:grid;place-items:center;
+      font-weight:800;
+      background:linear-gradient(135deg, rgba(0,229,255,.18), rgba(125,98,255,.2));
+      border:1px solid rgba(255,255,255,.08);
+    }
+
+    .insight-main strong{display:block;font-size:14px;margin-bottom:4px}
+    .insight-main span{display:block;font-size:12px;color:var(--muted);line-height:1.55}
+    .insight-score{
+      font-size:12px;
+      padding:8px 12px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,.08);
+      background:rgba(255,255,255,.05);
+    }
+
+    .tags{
+      display:flex;gap:8px;flex-wrap:wrap;margin-top:10px
+    }
+
+    .tag{
+      padding:7px 10px;
+      border-radius:999px;
+      font-size:11px;
+      color:#dce8ff;
+      border:1px solid rgba(255,255,255,.08);
+      background:rgba(255,255,255,.04);
+    }
+
+    .viz-box{
+      height:100%;
+      min-height:330px;
+      border-radius:24px;
+      padding:18px;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.01)),
+        radial-gradient(circle at center, rgba(0,229,255,.05), transparent 38%);
+      border:1px solid rgba(255,255,255,.07);
+      display:flex;
+      flex-direction:column;
+    }
+
+    .bar-chart{
+      margin-top:20px;
+      display:grid;
+      gap:14px;
+    }
+
+    .bar-row{
+      display:grid;
+      grid-template-columns:110px 1fr 56px;
+      gap:14px;
+      align-items:center;
+      font-size:13px;
+    }
+
+    .bar-label{color:#dbe7ff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .bar-track{
+      height:14px;border-radius:999px;
+      background:rgba(255,255,255,.06);
+      overflow:hidden;border:1px solid rgba(255,255,255,.05);
+      position:relative;
+    }
+
+    .bar-fill{
+      height:100%;
+      border-radius:999px;
+      background:linear-gradient(90deg, var(--cyan), var(--violet));
+      box-shadow:0 0 20px rgba(0,229,255,.18);
+    }
+
+    .bar-value{color:var(--muted);font-weight:700;text-align:right}
+
+    .toolbar{
+      display:grid;
+      grid-template-columns:1fr auto auto auto;
+      gap:12px;
+      align-items:center;
+      margin-bottom:14px;
+    }
+
+    .toolbar .input{height:48px}
+
+    .datatable-wrap{
+      border-radius:30px;
+      padding:20px;
+      overflow:hidden;
+    }
+
+    .table-shell{
+      border:1px solid rgba(255,255,255,.07);
+      border-radius:22px;
+      overflow:auto;
+      background:rgba(3,8,17,.38);
+      max-height:700px;
+    }
+
+    table{
+      width:100%;
+      border-collapse:separate;
+      border-spacing:0;
+      min-width:1400px;
+    }
+
+    thead th{
+      position:sticky;
+      top:0;
+      z-index:3;
+      background:rgba(9,18,34,.95);
+      backdrop-filter:blur(14px);
+      color:#c9daf9;
+      font-size:11px;
+      text-transform:uppercase;
+      letter-spacing:.14em;
+      padding:15px 14px;
+      border-bottom:1px solid rgba(255,255,255,.08);
+      cursor:pointer;
+      user-select:none;
+      white-space:nowrap;
+    }
+
+    thead th:hover{color:#fff;background:rgba(12,24,44,.98)}
+
+    tbody tr{
+      transition:.2s ease;
+      border-bottom:1px solid rgba(255,255,255,.04);
+    }
+
+    tbody tr:hover{
+      background:rgba(255,255,255,.035);
+      box-shadow:inset 0 0 0 1px rgba(0,229,255,.07);
+    }
+
+    td{
+      padding:14px;
+      border-bottom:1px solid rgba(255,255,255,.05);
+      color:#e6efff;
+      font-size:13px;
+      vertical-align:top;
+    }
+
+    td.muted{color:var(--muted)}
+    td.small{font-size:12px}
+    td .truncate{
+      max-width:320px;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      white-space:nowrap;
+      display:block;
+    }
+
+    .pill{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding:7px 10px;
+      border-radius:999px;
+      font-size:11px;
+      font-weight:700;
+      letter-spacing:.04em;
+      text-transform:uppercase;
+      border:1px solid rgba(255,255,255,.08);
+      white-space:nowrap;
+    }
+
+    .pill.green{background:rgba(60,240,167,.10);color:#9af8d1;border-color:rgba(60,240,167,.20)}
+    .pill.red{background:rgba(255,102,125,.10);color:#ffb2bf;border-color:rgba(255,102,125,.22)}
+    .pill.amber{background:rgba(255,202,90,.10);color:#ffe0a1;border-color:rgba(255,202,90,.18)}
+    .pill.cyan{background:rgba(0,229,255,.10);color:#a6f9ff;border-color:rgba(0,229,255,.18)}
+    .pill.violet{background:rgba(125,98,255,.12);color:#c6bbff;border-color:rgba(125,98,255,.18)}
+
+    .row-actions{
+      display:flex;gap:8px;align-items:center
+    }
+
+    .icon-btn{
+      width:36px;height:36px;border-radius:12px;
+      display:grid;place-items:center;
+      background:rgba(255,255,255,.045);
+      border:1px solid rgba(255,255,255,.08);
+      color:#fff;
+      cursor:pointer;
+    }
+
+    .icon-btn:hover{
+      background:rgba(255,255,255,.08);
+      transform:translateY(-1px);
+    }
+
+    .detail-overlay{
+      position:fixed; inset:0;
+      background:rgba(2,7,15,.58);
+      backdrop-filter:blur(10px);
+      -webkit-backdrop-filter:blur(10px);
+      z-index:30;
+      display:none;
+      padding:24px;
+    }
+
+    .detail-overlay.show{display:block}
+
+    .detail-card{
+      width:min(1180px, 100%);
+      max-height:calc(100vh - 48px);
+      margin:0 auto;
+      border-radius:30px;
+      padding:22px;
+      overflow:auto;
+      position:relative;
+    }
+
+    .detail-head{
+      display:flex;justify-content:space-between;gap:16px;align-items:flex-start;
+      margin-bottom:18px;
+    }
+
+    .detail-title h3{
+      margin:0 0 6px;
+      font-size:28px;
+      font-family:'Space Grotesk',sans-serif;
+    }
+
+    .detail-title p{
+      margin:0;color:var(--muted);font-size:13px;line-height:1.7;max-width:780px
+    }
+
+    .detail-grid{
+      display:grid;
+      grid-template-columns:repeat(3, minmax(0,1fr));
+      gap:16px;
+      margin-top:10px;
+    }
+
+    .detail-box{
+      border-radius:20px;
+      padding:18px;
+      background:rgba(255,255,255,.035);
+      border:1px solid rgba(255,255,255,.07);
+    }
+
+    .detail-box h4{
+      margin:0 0 12px;
+      font-size:13px;
+      text-transform:uppercase;
+      letter-spacing:.14em;
+      color:var(--muted);
+    }
+
+    .kv{
+      display:grid;
+      gap:10px;
+    }
+
+    .kv-row{
+      display:grid;
+      grid-template-columns:130px 1fr;
+      gap:14px;
+      font-size:13px;
+      line-height:1.6;
+      align-items:start;
+    }
+
+    .kv-row .k{color:var(--muted)}
+    .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace}
+    .empty{
+      padding:30px 20px;
+      text-align:center;
+      color:var(--muted);
+      font-size:14px;
+    }
+
+    .footer-note{
+      margin-top:14px;
+      color:var(--muted-2);
+      font-size:12px;
+      line-height:1.7;
+    }
+
+    .legend{
+      display:flex;gap:10px;flex-wrap:wrap;margin-top:12px
+    }
+
+    .legend span{
+      display:inline-flex;align-items:center;gap:8px;
+      color:var(--muted);font-size:12px;padding:8px 10px;
+      border-radius:999px;background:rgba(255,255,255,.035);
+      border:1px solid rgba(255,255,255,.06);
+    }
+
+    .legend i{
+      width:10px;height:10px;border-radius:50%;display:inline-block
+    }
+
+    .statusline{
+      display:flex;gap:12px;flex-wrap:wrap;margin-top:12px
+    }
+
+    .status-card{
+      flex:1 1 180px;
+      min-width:180px;
+      padding:12px 14px;
+      border-radius:16px;
+      background:rgba(255,255,255,.035);
+      border:1px solid rgba(255,255,255,.07);
+      color:#d8e7ff;
+      font-size:12px;
+      line-height:1.6;
+    }
+
+    .status-card strong{
+      display:block;
+      margin-bottom:4px;
+      color:#fff;
+      font-size:12px;
+      text-transform:uppercase;
+      letter-spacing:.12em;
+    }
+
+    .hidden{display:none !important}
+
+    @media (max-width: 1300px){
+      .stats{grid-template-columns:repeat(3,minmax(0,1fr))}
+      .insight-grid{grid-template-columns:1fr}
+      .hero-grid{grid-template-columns:1fr}
+      .layout{grid-template-columns:1fr}
+      .sidebar{position:static}
+    }
+
+    @media (max-width: 900px){
+      .app{width:min(100% - 20px, 1600px)}
+      .topbar{grid-template-columns:1fr}
+      .topbar-actions{min-width:0;justify-content:flex-start;flex-wrap:wrap}
+      .stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+      .toolbar{grid-template-columns:1fr 1fr}
+      .detail-grid{grid-template-columns:1fr}
+      .detail-head{flex-direction:column}
+    }
+
+    @media (max-width: 640px){
+      .stats{grid-template-columns:1fr}
+      .toolbar{grid-template-columns:1fr}
+      .btn-row{grid-template-columns:1fr}
+      .hero h2{font-size:28px}
+      .title{font-size:22px}
+      .brand{padding:16px;align-items:flex-start;gap:12px;flex-direction:column}
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="topbar">
+      <div class="brand">
+        <div class="brand-left">
+          <div class="brand-mark"></div>
+          <div>
+            <div class="eyebrow">Advanced Exposure Intelligence</div>
+            <h1 class="title">VulnSight // KEV Prioritization Console</h1>
+            <div class="subtitle">Premium threat operations dashboard for exploit-driven vulnerability triage and executive-grade visibility.</div>
+          </div>
+        </div>
+        <div class="brand-status">
+          <div class="pulse"></div>
+          <span id="appStatus">Awaiting dataset upload</span>
+        </div>
+      </div>
+
+      <div class="topbar-actions">
+        <div class="chip"><span class="dot"></span> Browser-side XLSX parsing</div>
+        <div class="chip"><span class="dot"></span> KEV cross-verification</div>
+        <div class="chip"><span class="dot"></span> GitHub Pages ready</div>
+      </div>
+    </div>
+
+    <section class="hero">
+      <div class="hero-grid">
+        <div>
+          <div class="eyebrow">Threat Prioritization Surface</div>
+          <h2>Upload a vulnerability export and instantly isolate the highest-priority findings tied to exploitation reality.</h2>
+          <p>
+            This dashboard parses large Excel workbooks, normalizes rows across all sheets, checks whether each CVE exists in the CISA Known Exploited Vulnerabilities catalog, and highlights findings that meet your exploit-based triage policy: known exploited equals true, VPR 7.0 or higher, and CVE confirmed in KEV.
+          </p>
+          <div class="hero-badges">
+            <div class="hero-badge">Multi-sheet workbook ingestion</div>
+            <div class="hero-badge">Deep row detail views</div>
+            <div class="hero-badge">Search + sort + export</div>
+            <div class="hero-badge">Severity and protocol analytics</div>
+            <div class="hero-badge">Executive KPI surface</div>
+            <div class="hero-badge">Premium cyber UI</div>
+          </div>
+        </div>
+
+        <div class="hero-side">
+          <div class="mini-stat">
+            <div class="mini-label">Target policy</div>
+            <div class="mini-value">3 Filters</div>
+            <div class="mini-meta">Known exploited = true, VPR score >= 7.0, and CVE present in the KEV catalog.</div>
+          </div>
+          <div class="mini-stat">
+            <div class="mini-label">Data sources</div>
+            <div class="mini-value">XLSX + KEV</div>
+            <div class="mini-meta">Workbook processed locally in your browser, with KEV data fetched from the CISA mirror feed.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="statusline">
+        <div class="status-card"><strong>Workbook</strong><span id="workbookInfo">No file loaded yet.</span></div>
+        <div class="status-card"><strong>KEV Feed</strong><span id="kevInfo">Not fetched yet.</span></div>
+        <div class="status-card"><strong>Filter Profile</strong><span id="profileInfo">Default exploit-priority profile is armed.</span></div>
+      </div>
+    </section>
+
+    <div class="layout">
+      <aside class="sidebar">
+        <section class="panel">
+          <h3 class="panel-title">Secure Upload</h3>
+          <p class="panel-sub">
+            Drop a vulnerability workbook here. The parser will scan all sheets, align columns, enrich rows, and surface the highest-priority exploitable issues.
+          </p>
+
+          <div class="upload-zone" id="uploadZone">
+            <input type="file" id="fileInput" accept=".xlsx,.xls" />
+            <div>
+              <div class="upload-icon">⬆</div>
+              <h4 class="upload-title">Upload workbook</h4>
+              <p class="upload-copy">Supports large multi-sheet Excel exports. Processing occurs in-browser for fast static deployment.</p>
+            </div>
+          </div>
+
+          <div class="btn-row">
+            <button class="btn-primary" id="loadSampleBtn">Load demo dataset</button>
+            <button class="btn-secondary" id="refreshKevBtn">Refresh KEV feed</button>
+          </div>
+
+          <div class="footer-note">
+            Expected columns include: <span class="mono">ip_int</span>, <span class="mono">ip</span>, <span class="mono">port</span>, <span class="mono">protocol</span>, <span class="mono">known_exploited</span>, <span class="mono">ransomware_exploited</span>, <span class="mono">severity</span>, <span class="mono">initial_detection</span>, <span class="mono">latest_detection</span>, <span class="mono">age_days</span>, <span class="mono">cvss_base_score</span>, <span class="mono">cvss_version</span>, <span class="mono">cvss_source</span>, <span class="mono">vpr_score</span>, <span class="mono">cve</span>, <span class="mono">name</span>, <span class="mono">description</span>, <span class="mono">solution</span>, <span class="mono">source</span>, and <span class="mono">plugin_id</span>.
+          </div>
+        </section>
+
+        <section class="panel">
+          <h3 class="panel-title">Filter Matrix</h3>
+          <p class="panel-sub">Fine-tune the operational lens used for results, investigation, and exports.</p>
+
+          <div class="stack">
+            <div class="switch">
+              <div class="meta">
+                <strong>Known exploited only</strong>
+                <span>Restrict to rows where workbook value resolves to true.</span>
+              </div>
+              <div class="toggle active" data-toggle="knownOnly"></div>
+            </div>
+
+            <div class="switch">
+              <div class="meta">
+                <strong>Require KEV presence</strong>
+                <span>Keep only CVEs found in the KEV catalog.</span>
+              </div>
+              <div class="toggle active" data-toggle="kevOnly"></div>
+            </div>
+
+            <div class="switch">
+              <div class="meta">
+                <strong>VPR threshold active</strong>
+                <span>Only keep rows meeting the minimum VPR score.</span>
+              </div>
+              <div class="toggle active" data-toggle="vprEnabled"></div>
+            </div>
+
+            <div class="field">
+              <label for="vprThreshold">Minimum VPR</label>
+              <input class="input" id="vprThreshold" type="number" step="0.1" value="7.0" min="0" max="10" />
+            </div>
+
+            <div class="field">
+              <label for="severityFilter">Severity</label>
+              <select id="severityFilter">
+                <option value="all">All severities</option>
+                <option value="critical">Critical</option>
+                <option value="high">High</option>
+                <option value="medium">Medium</option>
+                <option value="low">Low</option>
+                <option value="info">Info</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="protocolFilter">Protocol</label>
+              <select id="protocolFilter">
+                <option value="all">All protocols</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="sheetFilter">Sheet scope</label>
+              <select id="sheetFilter">
+                <option value="all">All sheets</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="ageMin">Minimum age days</label>
+              <input class="input" id="ageMin" type="number" min="0" placeholder="e.g. 30" />
+            </div>
+
+            <div class="field">
+              <label for="assetSearch">Asset / text focus</label>
+              <input class="input" id="assetSearch" type="text" placeholder="Search IP, CVE, name, description..." />
+            </div>
+
+            <div class="btn-row">
+              <button class="btn-primary" id="applyFiltersBtn">Apply filters</button>
+              <button class="btn-secondary" id="resetFiltersBtn">Reset</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <h3 class="panel-title">Coverage Notes</h3>
+          <p class="panel-sub">Interpretation aids for analysts, leads, and executive stakeholders.</p>
+
+          <div class="legend">
+            <span><i style="background:var(--green)"></i> Passes exploit-priority policy</span>
+            <span><i style="background:var(--amber)"></i> Near-threshold or missing signal</span>
+            <span><i style="background:var(--red)"></i> Fails policy gate</span>
+            <span><i style="background:var(--cyan)"></i> Confirmed in KEV</span>
+          </div>
+
+          <div class="footer-note">
+            KEV presence confirms catalog membership, not a CVSS score source. CVSS values shown in this dashboard come from your workbook fields, while KEV membership is used as a separate exploit-relevance signal.
+          </div>
+        </section>
+      </aside>
+
+      <main class="main">
+        <section class="stats">
+          <div class="stat-card">
+            <div class="stat-label">Total rows ingested</div>
+            <div class="stat-value" id="statTotal">0</div>
+            <div class="stat-foot" id="statTotalMeta">Awaiting workbook parsing.</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Policy matches</div>
+            <div class="stat-value" id="statFiltered">0</div>
+            <div class="stat-foot" id="statFilteredMeta">Rows meeting the current exploit-priority policy.</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Unique CVEs</div>
+            <div class="stat-value" id="statUniqueCves">0</div>
+            <div class="stat-foot" id="statUniqueCvesMeta">Distinct CVEs in the active result set.</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">KEV confirmed</div>
+            <div class="stat-value" id="statKev">0</div>
+            <div class="stat-foot" id="statKevMeta">Rows whose CVE appears in the KEV catalog.</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">High severity exposure</div>
+            <div class="stat-value" id="statHighRisk">0</div>
+            <div class="stat-foot" id="statHighRiskMeta">Critical and high findings in the current result set.</div>
+          </div>
+        </section>
+
+        <section class="panel insight-grid">
+          <div>
+            <h3 class="panel-title">Priority findings</h3>
+            <p class="panel-sub">Top records weighted by exploit indicators, VPR, CVSS, ransomware signal, age, and severity.</p>
+            <div class="insight-list" id="topFindingsList">
+              <div class="empty">Upload a workbook to populate prioritized findings.</div>
+            </div>
+          </div>
+
+          <div class="viz-box">
+            <h3 class="panel-title" style="margin-bottom:0">Severity distribution</h3>
+            <p class="panel-sub">Active result set grouped by normalized severity labels.</p>
+            <div class="bar-chart" id="severityChart">
+              <div class="empty">No distribution available yet.</div>
+            </div>
+          </div>
+        </section>
+
+        <section class="datatable-wrap">
+          <div class="toolbar">
+            <input class="input" id="tableSearch" type="text" placeholder="Live table search across IP, CVE, name, plugin, protocol, source..." />
+            <button class="btn-secondary" id="exportCsvBtn">Export CSV</button>
+            <button class="btn-secondary" id="copySummaryBtn">Copy summary</button>
+            <button class="btn-primary" id="clearDataBtn">Clear session</button>
+          </div>
+
+          <div class="table-shell">
+            <table>
+              <thead>
+                <tr>
+                  <th data-sort="riskScore">Risk</th>
+                  <th data-sort="ip">IP</th>
+                  <th data-sort="port">Port</th>
+                  <th data-sort="protocol">Protocol</th>
+                  <th data-sort="severity">Severity</th>
+                  <th data-sort="known_exploited">Known Exploited</th>
+                  <th data-sort="ransomware_exploited">Ransomware</th>
+                  <th data-sort="vpr_score">VPR</th>
+                  <th data-sort="cvss_base_score">CVSS</th>
+                  <th data-sort="cve">CVE</th>
+                  <th data-sort="kevConfirmed">KEV</th>
+                  <th data-sort="age_days">Age</th>
+                  <th data-sort="name">Name</th>
+                  <th data-sort="plugin_id">Plugin ID</th>
+                  <th data-sort="sheetName">Sheet</th>
+                  <th>Details</th>
+                </tr>
+              </thead>
+              <tbody id="resultsTableBody">
+                <tr><td colspan="16" class="empty">No data loaded.</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="footer-note" id="tableFootnote">
+            The active table will display the rows that pass your current filter model, and each record can be expanded for deep technical and remediation detail.
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <div class="detail-overlay" id="detailOverlay">
+    <div class="detail-card">
+      <div class="detail-head">
+        <div class="detail-title">
+          <div class="eyebrow">Analyst Record View</div>
+          <h3 id="detailMainTitle">Finding detail</h3>
+          <p id="detailMainSub">Full technical and contextual metadata for the selected row.</p>
+        </div>
+        <button class="btn-secondary" id="closeDetailBtn">Close</button>
+      </div>
+
+      <div class="detail-grid">
+        <div class="detail-box">
+          <h4>Exposure identity</h4>
+          <div class="kv" id="detailIdentity"></div>
+        </div>
+        <div class="detail-box">
+          <h4>Risk and exploitability</h4>
+          <div class="kv" id="detailRisk"></div>
+        </div>
+        <div class="detail-box">
+          <h4>Detection timeline</h4>
+          <div class="kv" id="detailTimeline"></div>
+        </div>
+        <div class="detail-box">
+          <h4>Description</h4>
+          <div class="kv" id="detailDescription"></div>
+        </div>
+        <div class="detail-box">
+          <h4>Remediation</h4>
+          <div class="kv" id="detailSolution"></div>
+        </div>
+        <div class="detail-box">
+          <h4>Catalog status</h4>
+          <div class="kv" id="detailCatalog"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const KEV_URLS = [
+      "https://raw.githubusercontent.com/cisagov/kev-data/develop/known_exploited_vulnerabilities.json",
+      "https://raw.githubusercontent.com/cisagov/kev-data/main/known_exploited_vulnerabilities.json"
+    ];
+
+    const state = {
+      rawRows: [],
+      filteredRows: [],
+      kevMap: new Map(),
+      kevLoaded: false,
+      kevMeta: null,
+      workbookName: null,
+      workbookSheets: [],
+      sortKey: "riskScore",
+      sortDir: "desc",
+      filters: {
+        knownOnly: true,
+        kevOnly: true,
+        vprEnabled: true,
+        vprThreshold: 7.0,
+        severity: "all",
+        protocol: "all",
+        sheet: "all",
+        ageMin: "",
+        assetSearch: ""
+      }
+    };
+
+    const expectedColumns = [
+      "ip_int","ip","port","protocol","known_exploited","ransomware_exploited",
+      "severity","initial_detection","latest_detection","age_days",
+      "cvss_base_score","cvss_version","cvss_source","vpr_score","cve","name",
+      "description","solution","source","plugin_id"
+    ];
+
+    const el = (id) => document.getElementById(id);
+
+    const refs = {
+      appStatus: el("appStatus"),
+      workbookInfo: el("workbookInfo"),
+      kevInfo: el("kevInfo"),
+      profileInfo: el("profileInfo"),
+      uploadZone: el("uploadZone"),
+      fileInput: el("fileInput"),
+      loadSampleBtn: el("loadSampleBtn"),
+      refreshKevBtn: el("refreshKevBtn"),
+      applyFiltersBtn: el("applyFiltersBtn"),
+      resetFiltersBtn: el("resetFiltersBtn"),
+      tableSearch: el("tableSearch"),
+      assetSearch: el("assetSearch"),
+      exportCsvBtn: el("exportCsvBtn"),
+      copySummaryBtn: el("copySummaryBtn"),
+      clearDataBtn: el("clearDataBtn"),
+      protocolFilter: el("protocolFilter"),
+      severityFilter: el("severityFilter"),
+      sheetFilter: el("sheetFilter"),
+      ageMin: el("ageMin"),
+      vprThreshold: el("vprThreshold"),
+      topFindingsList: el("topFindingsList"),
+      severityChart: el("severityChart"),
+      resultsTableBody: el("resultsTableBody"),
+      tableFootnote: el("tableFootnote"),
+      detailOverlay: el("detailOverlay"),
+      closeDetailBtn: el("closeDetailBtn"),
+      detailMainTitle: el("detailMainTitle"),
+      detailMainSub: el("detailMainSub"),
+      detailIdentity: el("detailIdentity"),
+      detailRisk: el("detailRisk"),
+      detailTimeline: el("detailTimeline"),
+      detailDescription: el("detailDescription"),
+      detailSolution: el("detailSolution"),
+      detailCatalog: el("detailCatalog"),
+      statTotal: el("statTotal"),
+      statFiltered: el("statFiltered"),
+      statUniqueCves: el("statUniqueCves"),
+      statKev: el("statKev"),
+      statHighRisk: el("statHighRisk"),
+      statTotalMeta: el("statTotalMeta"),
+      statFilteredMeta: el("statFilteredMeta"),
+      statUniqueCvesMeta: el("statUniqueCvesMeta"),
+      statKevMeta: el("statKevMeta"),
+      statHighRiskMeta: el("statHighRiskMeta")
+    };
+
+    function normalizeHeader(header){
+      return String(header ?? "")
+        .trim()
+        .toLowerCase()
+        .replace(/\s+/g, "_")
+        .replace(/[^\w]/g, "_")
+        .replace(/_+/g, "_")
+        .replace(/^_+|_+$/g, "");
+    }
+
+    function truthy(value){
+      if (value === true) return true;
+      if (value === false || value == null) return false;
+      const s = String(value).trim().toLowerCase();
+      return ["true","1","yes","y","t","known exploited","confirmed"].includes(s);
+    }
+
+    function normalizeSeverity(value){
+      const s = String(value ?? "").trim().toLowerCase();
+      if (!s) return "unknown";
+      if (s.includes("critical")) return "critical";
+      if (s.includes("high")) return "high";
+      if (s.includes("medium") || s.includes("moderate")) return "medium";
+      if (s.includes("low")) return "low";
+      if (s.includes("info")) return "info";
+      return s;
+    }
+
+    function severityWeight(sev){
+      return {critical:5, high:4, medium:3, low:2, info:1, unknown:0}[normalizeSeverity(sev)] ?? 0;
+    }
+
+    function toNumber(value){
+      if (value == null || value === "") return null;
+      const n = Number(String(value).replace(/,/g, "").trim());
+      return Number.isFinite(n) ? n : null;
+    }
+
+    function normalizeCVE(value){
+      const match = String(value ?? "").toUpperCase().match(/CVE-\d{4}-\d{4,7}/);
+      return match ? match[0] : "";
+    }
+
+    function safeText(value, fallback = "—"){
+      const s = String(value ?? "").trim();
+      return s ? s : fallback;
+    }
+
+    function scoreRow(row){
+      const sev = severityWeight(row.severity);
+      const kev = row.kevConfirmed ? 20 : 0;
+      const known = row.known_exploited_bool ? 18 : 0;
+      const ransom = row.ransomware_exploited_bool ? 10 : 0;
+      const vpr = Math.min(10, row.vpr_score_num ?? 0) * 3.2;
+      const cvss = Math.min(10, row.cvss_base_score_num ?? 0) * 1.8;
+      const age = Math.min(365, row.age_days_num ?? 0) / 20;
+      return Number((sev * 7 + kev + known + ransom + vpr + cvss + age).toFixed(1));
+    }
+
+    function riskBand(score){
+      if (score >= 70) return {label:"priority alpha", cls:"green"};
+      if (score >= 50) return {label:"priority beta", cls:"cyan"};
+      if (score >= 35) return {label:"watchlist", cls:"amber"};
+      return {label:"baseline", cls:"red"};
+    }
+
+    function pill(label, cls){
+      return `<span class="pill ${cls}">${label}</span>`;
+    }
+
+    function setStatus(message){
+      refs.appStatus.textContent = message;
+    }
+
+    async function fetchKevData(){
+      refs.kevInfo.textContent = "Fetching KEV dataset...";
+      setStatus("Loading KEV catalog");
+      for (const url of KEV_URLS){
+        try{
+          const res = await fetch(url, {cache:"no-store"});
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          const data = await res.json();
+          const vulnerabilities = data?.vulnerabilities || [];
+          const map = new Map();
+          vulnerabilities.forEach(v => {
+            const cve = normalizeCVE(v.cveID || v.cve || "");
+            if (cve) map.set(cve, v);
+          });
+          state.kevMap = map;
+          state.kevLoaded = true;
+          state.kevMeta = {
+            count: vulnerabilities.length,
+            title: data?.title || "KEV Catalog",
+            version: data?.catalogVersion || data?.version || "n/a",
+            dateReleased: data?.dateReleased || "n/a"
+          };
+          refs.kevInfo.textContent = `Loaded ${vulnerabilities.length.toLocaleString()} KEV entries. Catalog version: ${state.kevMeta.version}.`;
+          setStatus("KEV catalog loaded");
+          return true;
+        }catch(err){
+          console.warn("KEV fetch failed for", url, err);
+        }
+      }
+      state.kevLoaded = false;
+      refs.kevInfo.textContent = "KEV fetch failed. Filters can still run, but KEV validation will be unavailable until retry succeeds.";
+      setStatus("KEV catalog unavailable");
+      return false;
+    }
+
+    function parseWorkbook(fileName, workbook){
+      const rows = [];
+      const sheetNames = workbook.SheetNames || [];
+      const foundHeaders = new Set();
+
+      sheetNames.forEach(sheetName => {
+        const sheet = workbook.Sheets[sheetName];
+        const json = XLSX.utils.sheet_to_json(sheet, {defval:"", raw:false});
+        json.forEach((row, idx) => {
+          const normalized = {};
+          Object.keys(row).forEach(key => {
+            const nk = normalizeHeader(key);
+            normalized[nk] = row[key];
+            foundHeaders.add(nk);
+          });
+
+          const entry = {
+            _rowId: cryptoRandomId(),
+            _sheetName: sheetName,
+            _sheetRowIndex: idx + 2,
+            ip_int: normalized.ip_int ?? "",
+            ip: normalized.ip ?? "",
+            port: normalized.port ?? "",
+            protocol: normalized.protocol ?? "",
+            known_exploited: normalized.known_exploited ?? "",
+            ransomware_exploited: normalized.ransomware_exploited ?? "",
+            severity: normalized.severity ?? "",
+            initial_detection: normalized.initial_detection ?? "",
+            latest_detection: normalized.latest_detection ?? "",
+            age_days: normalized.age_days ?? "",
+            cvss_base_score: normalized.cvss_base_score ?? "",
+            cvss_version: normalized.cvss_version ?? "",
+            cvss_source: normalized.cvss_source ?? "",
+            vpr_score: normalized.vpr_score ?? "",
+            cve: normalized.cve ?? "",
+            name: normalized.name ?? "",
+            description: normalized.description ?? "",
+            solution: normalized.solution ?? "",
+            source: normalized.source ?? "",
+            plugin_id: normalized.plugin_id ?? ""
+          };
+
+          entry.known_exploited_bool = truthy(entry.known_exploited);
+          entry.ransomware_exploited_bool = truthy(entry.ransomware_exploited);
+          entry.severity_norm = normalizeSeverity(entry.severity);
+          entry.vpr_score_num = toNumber(entry.vpr_score);
+          entry.cvss_base_score_num = toNumber(entry.cvss_base_score);
+          entry.age_days_num = toNumber(entry.age_days);
+          entry.cve_norm = normalizeCVE(entry.cve);
+          entry.kevConfirmed = entry.cve_norm ? state.kevMap.has(entry.cve_norm) : false;
+          entry.kevRecord = entry.kevConfirmed ? state.kevMap.get(entry.cve_norm) : null;
+          entry.riskScore = scoreRow(entry);
+          entry.sheetName = sheetName;
+
+          rows.push(entry);
+        });
+      });
+
+      state.rawRows = rows;
+      state.workbookName = fileName;
+      state.workbookSheets = sheetNames;
+
+      const missingExpected = expectedColumns.filter(c => !foundHeaders.has(c));
+      refs.workbookInfo.textContent =
+        `${fileName} parsed across ${sheetNames.length} sheet(s), ${rows.length.toLocaleString()} row(s).` +
+        (missingExpected.length ? ` Missing or unmatched columns: ${missingExpected.slice(0,8).join(", ")}${missingExpected.length > 8 ? "..." : ""}.` : " All expected core columns were detected or mapped.");
+
+      populateSheetFilter(sheetNames);
+      populateProtocolFilter(rows);
+      applyFilters();
+      setStatus("Workbook parsed successfully");
+    }
+
+    function cryptoRandomId(){
+      if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+      return "row_" + Math.random().toString(36).slice(2) + Date.now().toString(36);
+    }
+
+    function populateSheetFilter(sheetNames){
+      refs.sheetFilter.innerHTML = `<option value="all">All sheets</option>` +
+        sheetNames.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join("");
+    }
+
+    function populateProtocolFilter(rows){
+      const set = new Set();
+      rows.forEach(r => {
+        const p = safeText(r.protocol, "").trim();
+        if (p) set.add(p);
+      });
+      const protocols = [...set].sort((a,b) => a.localeCompare(b));
+      refs.protocolFilter.innerHTML = `<option value="all">All protocols</option>` +
+        protocols.map(p => `<option value="${escapeHtml(p)}">${escapeHtml(p)}</option>`).join("");
+    }
+
+    function currentProfileText(){
+      const parts = [];
+      if (state.filters.knownOnly) parts.push("Known exploited only");
+      if (state.filters.kevOnly) parts.push("KEV-confirmed CVEs only");
+      if (state.filters.vprEnabled) parts.push(`VPR >= ${state.filters.vprThreshold}`);
+      if (state.filters.severity !== "all") parts.push(`Severity: ${state.filters.severity}`);
+      if (state.filters.protocol !== "all") parts.push(`Protocol: ${state.filters.protocol}`);
+      if (state.filters.sheet !== "all") parts.push(`Sheet: ${state.filters.sheet}`);
+      if (state.filters.ageMin !== "") parts.push(`Age >= ${state.filters.ageMin}`);
+      return parts.length ? parts.join(" • ") : "No filters active";
+    }
+
+    function applyFilters(){
+      syncFiltersFromUI();
+
+      const textQuery = (state.filters.assetSearch || refs.tableSearch.value || "").trim().toLowerCase();
+
+      state.filteredRows = state.rawRows.filter(row => {
+        if (state.filters.knownOnly && !row.known_exploited_bool) return false;
+        if (state.filters.kevOnly && !row.kevConfirmed) return false;
+        if (state.filters.vprEnabled){
+          const threshold = Number(state.filters.vprThreshold);
+          if (!Number.isFinite(row.vpr_score_num) || row.vpr_score_num < threshold) return false;
+        }
+        if (state.filters.severity !== "all" && row.severity_norm !== state.filters.severity) return false;
+        if (state.filters.protocol !== "all" && safeText(row.protocol, "").toLowerCase() !== state.filters.protocol.toLowerCase()) return false;
+        if (state.filters.sheet !== "all" && row.sheetName !== state.filters.sheet) return false;
+        if (state.filters.ageMin !== ""){
+          const minAge = Number(state.filters.ageMin);
+          if (!Number.isFinite(row.age_days_num) || row.age_days_num < minAge) return false;
+        }
+        if (textQuery){
+          const haystack = [
+            row.ip, row.ip_int, row.port, row.protocol, row.severity, row.cve_norm, row.name,
+            row.description, row.solution, row.plugin_id, row.source, row.sheetName
+          ].join(" ").toLowerCase();
+          if (!haystack.includes(textQuery)) return false;
+        }
+        return true;
+      });
+
+      sortRows();
+      renderAll();
+      refs.profileInfo.textContent = currentProfileText();
+    }
+
+    function syncFiltersFromUI(){
+      state.filters.vprThreshold = parseFloat(refs.vprThreshold.value || "7.0");
+      state.filters.severity = refs.severityFilter.value;
+      state.filters.protocol = refs.protocolFilter.value;
+      state.filters.sheet = refs.sheetFilter.value;
+      state.filters.ageMin = refs.ageMin.value.trim();
+      state.filters.assetSearch = refs.assetSearch.value.trim();
+    }
+
+    function sortRows(){
+      const key = state.sortKey;
+      const dir = state.sortDir === "asc" ? 1 : -1;
+      state.filteredRows.sort((a,b) => {
+        const av = a[key];
+        const bv = b[key];
+
+        const an = typeof av === "number" ? av : toNumber(av);
+        const bn = typeof bv === "number" ? bv : toNumber(bv);
+
+        if (an != null && bn != null) return (an - bn) * dir;
+        return String(av ?? "").localeCompare(String(bv ?? ""), undefined, {numeric:true, sensitivity:"base"}) * dir;
+      });
+    }
+
+    function renderAll(){
+      updateStats();
+      renderTopFindings();
+      renderSeverityChart();
+      renderTable();
+    }
+
+    function updateStats(){
+      const total = state.rawRows.length;
+      const filtered = state.filteredRows.length;
+      const uniqueCves = new Set(state.filteredRows.map(r => r.cve_norm).filter(Boolean)).size;
+      const kevCount = state.filteredRows.filter(r => r.kevConfirmed).length;
+      const highRisk = state.filteredRows.filter(r => ["critical","high"].includes(r.severity_norm)).length;
+
+      refs.statTotal.textContent = total.toLocaleString();
+      refs.statFiltered.textContent = filtered.toLocaleString();
+      refs.statUniqueCves.textContent = uniqueCves.toLocaleString();
+      refs.statKev.textContent = kevCount.toLocaleString();
+      refs.statHighRisk.textContent = highRisk.toLocaleString();
+
+      refs.statTotalMeta.textContent = total ? `${state.workbookSheets.length} sheet(s) scanned and normalized into an analyst-ready dataset.` : "Awaiting workbook parsing.";
+      refs.statFilteredMeta.textContent = filtered ? `${((filtered / Math.max(total,1)) * 100).toFixed(1)}% of ingested rows meet the active policy.` : "Rows meeting the current exploit-priority policy.";
+      refs.statUniqueCvesMeta.textContent = uniqueCves ? `${uniqueCves.toLocaleString()} distinct exposure identifiers currently in scope.` : "Distinct CVEs in the active result set.";
+      refs.statKevMeta.textContent = kevCount ? `${kevCount.toLocaleString()} active rows are backed by KEV catalog membership.` : "Rows whose CVE appears in the KEV catalog.";
+      refs.statHighRiskMeta.textContent = highRisk ? `${highRisk.toLocaleString()} critical/high findings remain after all active filters.` : "Critical and high findings in the current result set.";
+
+      refs.tableFootnote.textContent = filtered
+        ? `Displaying ${filtered.toLocaleString()} prioritized row(s) from ${total.toLocaleString()} ingested row(s). Sorted by ${state.sortKey} (${state.sortDir}).`
+        : "No rows currently match the active policy. Relax one or more filters to widen scope.";
+    }
+
+    function renderTopFindings(){
+      if (!state.filteredRows.length){
+        refs.topFindingsList.innerHTML = `<div class="empty">No prioritized findings available for the active filter profile.</div>`;
+        return;
+      }
+
+      const top = [...state.filteredRows].sort((a,b) => b.riskScore - a.riskScore).slice(0, 6);
+      refs.topFindingsList.innerHTML = top.map((row, idx) => {
+        const band = riskBand(row.riskScore);
+        const meta = [
+          row.ip || "No IP",
+          row.port ? `:${row.port}` : "",
+          row.protocol || "Unknown protocol",
+          row.cve_norm || "No CVE"
+        ].filter(Boolean).join(" • ");
+
+        return `
+          <div class="insight-item">
+            <div class="insight-rank">#${idx + 1}</div>
+            <div class="insight-main">
+              <strong>${escapeHtml(safeText(row.name, "Unnamed finding"))}</strong>
+              <span>${escapeHtml(meta)}</span>
+              <div class="tags">
+                ${pill(row.severity_norm, severityPillClass(row.severity_norm))}
+                ${row.kevConfirmed ? pill("KEV confirmed","cyan") : pill("No KEV hit","amber")}
+                ${row.known_exploited_bool ? pill("Known exploited","green") : pill("Not flagged","red")}
+                ${row.ransomware_exploited_bool ? pill("Ransomware signal","violet") : ""}
+              </div>
+            </div>
+            <div class="insight-score">${band.label} • ${row.riskScore}</div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    function renderSeverityChart(){
+      if (!state.filteredRows.length){
+        refs.severityChart.innerHTML = `<div class="empty">No distribution available yet.</div>`;
+        return;
+      }
+      const counts = {critical:0, high:0, medium:0, low:0, info:0, unknown:0};
+      state.filteredRows.forEach(r => counts[r.severity_norm] = (counts[r.severity_norm] || 0) + 1);
+      const max = Math.max(...Object.values(counts), 1);
+
+      refs.severityChart.innerHTML = Object.entries(counts)
+        .filter(([,v]) => v > 0)
+        .sort((a,b) => severityWeight(b[0]) - severityWeight(a[0]))
+        .map(([label, value]) => `
+          <div class="bar-row">
+            <div class="bar-label">${escapeHtml(label)}</div>
+            <div class="bar-track">
+              <div class="bar-fill" style="width:${(value/max)*100}%"></div>
+            </div>
+            <div class="bar-value">${value}</div>
+          </div>
+        `).join("");
+    }
+
+    function renderTable(){
+      if (!state.filteredRows.length){
+        refs.resultsTableBody.innerHTML = `<tr><td colspan="16" class="empty">No rows match the active filters.</td></tr>`;
+        return;
+      }
+
+      refs.resultsTableBody.innerHTML = state.filteredRows.map(row => {
+        const band = riskBand(row.riskScore);
+        return `
+          <tr>
+            <td>${pill(`${band.label} • ${row.riskScore}`, band.cls)}</td>
+            <td>
+              <div>${escapeHtml(safeText(row.ip))}</div>
+              <div class="muted small mono">${escapeHtml(safeText(row.ip_int))}</div>
+            </td>
+            <td>${escapeHtml(safeText(row.port))}</td>
+            <td>${pill(safeText(row.protocol, "N/A"), "violet")}</td>
+            <td>${pill(row.severity_norm, severityPillClass(row.severity_norm))}</td>
+            <td>${row.known_exploited_bool ? pill("true","green") : pill("false","red")}</td>
+            <td>${row.ransomware_exploited_bool ? pill("true","violet") : pill("false","amber")}</td>
+            <td>${row.vpr_score_num != null ? pill(row.vpr_score_num.toFixed(1), row.vpr_score_num >= 7 ? "green" : "amber") : '<span class="muted">—</span>'}</td>
+            <td>${row.cvss_base_score_num != null ? pill(row.cvss_base_score_num.toFixed(1), scoreClass(row.cvss_base_score_num)) : '<span class="muted">—</span>'}</td>
+            <td><span class="mono">${escapeHtml(safeText(row.cve_norm || row.cve))}</span></td>
+            <td>${row.kevConfirmed ? pill("catalog hit","cyan") : pill("not found","red")}</td>
+            <td>${row.age_days_num != null ? `${row.age_days_num}` : '<span class="muted">—</span>'}</td>
+            <td><span class="truncate" title="${escapeHtml(safeText(row.name))}">${escapeHtml(safeText(row.name))}</span></td>
+            <td><span class="mono">${escapeHtml(safeText(row.plugin_id))}</span></td>
+            <td>${escapeHtml(row.sheetName)}</td>
+            <td>
+              <div class="row-actions">
+                <button class="icon-btn" onclick="openDetail('${row._rowId}')">↗</button>
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join("");
+    }
+
+    function severityPillClass(sev){
+      if (sev === "critical") return "red";
+      if (sev === "high") return "amber";
+      if (sev === "medium") return "cyan";
+      if (sev === "low" || sev === "info") return "violet";
+      return "amber";
+    }
+
+    function scoreClass(score){
+      if (score >= 9) return "red";
+      if (score >= 7) return "amber";
+      if (score >= 4) return "cyan";
+      return "violet";
+    }
+
+    function kvRow(key, value, mono = false){
+      return `<div class="kv-row"><div class="k">${escapeHtml(key)}</div><div class="${mono ? "mono" : ""}">${escapeHtml(safeText(value))}</div></div>`;
+    }
+
+    window.openDetail = function(rowId){
+      const row = state.rawRows.find(r => r._rowId === rowId);
+      if (!row) return;
+
+      refs.detailMainTitle.textContent = row.name || row.cve_norm || "Finding detail";
+      refs.detailMainSub.textContent = `${safeText(row.ip)} • ${safeText(row.protocol)}${row.port ? `/${row.port}` : ""} • ${safeText(row.sheetName)} • Risk score ${row.riskScore}`;
+
+      refs.detailIdentity.innerHTML = [
+        kvRow("IP", row.ip, true),
+        kvRow("IP Integer", row.ip_int, true),
+        kvRow("Port", row.port, true),
+        kvRow("Protocol", row.protocol),
+        kvRow("Plugin ID", row.plugin_id, true),
+        kvRow("Source", row.source),
+        kvRow("Sheet", row.sheetName),
+        kvRow("Sheet row", row._sheetRowIndex)
+      ].join("");
+
+      refs.detailRisk.innerHTML = [
+        kvRow("Severity", row.severity_norm),
+        kvRow("Known exploited", String(row.known_exploited_bool)),
+        kvRow("Ransomware exploited", String(row.ransomware_exploited_bool)),
+        kvRow("VPR", row.vpr_score_num != null ? row.vpr_score_num.toFixed(1) : row.vpr_score),
+        kvRow("CVSS", row.cvss_base_score_num != null ? row.cvss_base_score_num.toFixed(1) : row.cvss_base_score),
+        kvRow("CVSS version", row.cvss_version),
+        kvRow("CVSS source", row.cvss_source),
+        kvRow("Risk score", row.riskScore)
+      ].join("");
+
+      refs.detailTimeline.innerHTML = [
+        kvRow("Initial detection", row.initial_detection),
+        kvRow("Latest detection", row.latest_detection),
+        kvRow("Age days", row.age_days_num != null ? row.age_days_num : row.age_days),
+        kvRow("Analyst state", row.kevConfirmed ? "KEV-confirmed exploitable exposure" : "Not confirmed in KEV")
+      ].join("");
+
+      refs.detailDescription.innerHTML = [
+        kvRow("CVE", row.cve_norm || row.cve, true),
+        kvRow("Finding name", row.name),
+        kvRow("Description", row.description || "No description provided in workbook.")
+      ].join("");
+
+      refs.detailSolution.innerHTML = [
+        kvRow("Remediation", row.solution || "No remediation text provided in workbook.")
+      ].join("");
+
+      const kev = row.kevRecord || {};
+      refs.detailCatalog.innerHTML = [
+        kvRow("KEV confirmed", row.kevConfirmed ? "Yes" : "No"),
+        kvRow("CVE", row.cve_norm || row.cve, true),
+        kvRow("Vendor", kev.vendorProject || "—"),
+        kvRow("Product", kev.product || "—"),
+        kvRow("Vulnerability name", kev.vulnerabilityName || "—"),
+        kvRow("Short description", kev.shortDescription || "—"),
+        kvRow("Required action", kev.requiredAction || "—"),
+        kvRow("Due date", kev.dueDate || "—"),
+        kvRow("Ransomware use", kev.knownRansomwareCampaignUse || "—")
+      ].join("");
+
+      refs.detailOverlay.classList.add("show");
+    };
+
+    function escapeHtml(str){
+      return String(str ?? "")
+        .replace(/&/g,"&amp;")
+        .replace(/</g,"&lt;")
+        .replace(/>/g,"&gt;")
+        .replace(/"/g,"&quot;")
+        .replace(/'/g,"&#039;");
+    }
+
+    function downloadCSV(rows){
+      if (!rows.length){
+        alert("No filtered rows available to export.");
+        return;
+      }
+      const exportRows = rows.map(r => ({
+        risk_score: r.riskScore,
+        risk_band: riskBand(r.riskScore).label,
+        ip_int: r.ip_int,
+        ip: r.ip,
+        port: r.port,
+        protocol: r.protocol,
+        known_exploited: r.known_exploited_bool,
+        ransomware_exploited: r.ransomware_exploited_bool,
+        severity: r.severity_norm,
+        initial_detection: r.initial_detection,
+        latest_detection: r.latest_detection,
+        age_days: r.age_days_num ?? r.age_days,
+        cvss_base_score: r.cvss_base_score_num ?? r.cvss_base_score,
+        cvss_version: r.cvss_version,
+        cvss_source: r.cvss_source,
+        vpr_score: r.vpr_score_num ?? r.vpr_score,
+        cve: r.cve_norm || r.cve,
+        kev_confirmed: r.kevConfirmed,
+        name: r.name,
+        description: r.description,
+        solution: r.solution,
+        source: r.source,
+        plugin_id: r.plugin_id,
+        sheet_name: r.sheetName,
+        sheet_row_index: r._sheetRowIndex
+      }));
+
+      const headers = Object.keys(exportRows[0]);
+      const lines = [
+        headers.join(","),
+        ...exportRows.map(obj => headers.map(h => csvCell(obj[h])).join(","))
+      ];
+      const blob = new Blob([lines.join("\n")], {type:"text/csv;charset=utf-8;"});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `vulnsight_filtered_${new Date().toISOString().slice(0,19).replace(/[:T]/g,"-")}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    function csvCell(value){
+      const s = String(value ?? "");
+      return /[",\n]/.test(s) ? `"${s.replace(/"/g,'""')}"` : s;
+    }
+
+    function copySummary(){
+      const total = state.rawRows.length;
+      const filtered = state.filteredRows.length;
+      const kevHits = state.filteredRows.filter(r => r.kevConfirmed).length;
+      const high = state.filteredRows.filter(r => ["critical","high"].includes(r.severity_norm)).length;
+      const unique = new Set(state.filteredRows.map(r => r.cve_norm).filter(Boolean)).size;
+
+      const top = [...state.filteredRows].slice(0,5).map((r,i) =>
+        `${i+1}. ${r.name || "Unnamed finding"} | ${r.ip || "No IP"} | ${r.cve_norm || "No CVE"} | severity=${r.severity_norm} | VPR=${r.vpr_score_num ?? "n/a"} | risk=${r.riskScore}`
+      ).join("\n");
+
+      const text =
+`VulnSight Summary
+Workbook: ${state.workbookName || "N/A"}
+Sheets: ${state.workbookSheets.length}
+Rows ingested: ${total}
+Rows matching active policy: ${filtered}
+Unique CVEs in result set: ${unique}
+KEV-confirmed rows: ${kevHits}
+Critical/High rows: ${high}
+Active profile: ${currentProfileText()}
+
+Top findings:
+${top || "No matching findings."}`;
+
+      navigator.clipboard.writeText(text).then(() => {
+        alert("Summary copied to clipboard.");
+      }).catch(() => {
+        alert("Unable to copy summary in this browser.");
+      });
+    }
+
+    function resetFilters(){
+      state.filters = {
+        knownOnly: true,
+        kevOnly: true,
+        vprEnabled: true,
+        vprThreshold: 7.0,
+        severity: "all",
+        protocol: "all",
+        sheet: "all",
+        ageMin: "",
+        assetSearch: ""
+      };
+      document.querySelectorAll(".toggle").forEach(t => t.classList.add("active"));
+      refs.vprThreshold.value = "7.0";
+      refs.severityFilter.value = "all";
+      refs.protocolFilter.value = "all";
+      refs.sheetFilter.value = "all";
+      refs.ageMin.value = "";
+      refs.assetSearch.value = "";
+      refs.tableSearch.value = "";
+      applyFilters();
+    }
+
+    function clearSession(){
+      state.rawRows = [];
+      state.filteredRows = [];
+      state.workbookName = null;
+      state.workbookSheets = [];
+      refs.fileInput.value = "";
+      refs.workbookInfo.textContent = "No file loaded yet.";
+      setStatus(state.kevLoaded ? "KEV catalog loaded, awaiting dataset upload" : "Awaiting dataset upload");
+      renderAll();
+      refs.resultsTableBody.innerHTML = `<tr><td colspan="16" class="empty">No data loaded.</td></tr>`;
+      refs.topFindingsList.innerHTML = `<div class="empty">Upload a workbook to populate prioritized findings.</div>`;
+      refs.severityChart.innerHTML = `<div class="empty">No distribution available yet.</div>`;
+      populateSheetFilter([]);
+      populateProtocolFilter([]);
+    }
+
+    function loadSampleData(){
+      const demo = [
+        {
+          ip_int:"3232235777", ip:"192.168.1.1", port:"443", protocol:"tcp", known_exploited:"true", ransomware_exploited:"false",
+          severity:"critical", initial_detection:"2026-01-10", latest_detection:"2026-03-02", age_days:"51",
+          cvss_base_score:"9.8", cvss_version:"3.1", cvss_source:"NVD", vpr_score:"9.4", cve:"CVE-2023-3519",
+          name:"Citrix ADC Remote Code Execution", description:"Externally exposed appliance vulnerability with active exploitation relevance.",
+          solution:"Apply the latest vendor fix and validate externally exposed management surface.", source:"scanner_export", plugin_id:"100001"
+        },
+        {
+          ip_int:"3232235778", ip:"192.168.1.2", port:"80", protocol:"tcp", known_exploited:"true", ransomware_exploited:"true",
+          severity:"high", initial_detection:"2026-02-02", latest_detection:"2026-03-05", age_days:"31",
+          cvss_base_score:"8.8", cvss_version:"3.1", cvss_source:"NVD", vpr_score:"8.1", cve:"CVE-2021-44228",
+          name:"Apache Log4j Remote Code Execution", description:"Log4Shell exposure with strong exploit history and ransomware relevance.",
+          solution:"Upgrade affected components and confirm removal of vulnerable library versions.", source:"scanner_export", plugin_id:"100002"
+        },
+        {
+          ip_int:"3232235780", ip:"192.168.1.4", port:"22", protocol:"tcp", known_exploited:"false", ransomware_exploited:"false",
+          severity:"medium", initial_detection:"2026-01-20", latest_detection:"2026-02-15", age_days:"26",
+          cvss_base_score:"5.6", cvss_version:"3.1", cvss_source:"NVD", vpr_score:"5.9", cve:"CVE-2020-0001",
+          name:"Legacy SSH Banner Disclosure", description:"Informational service disclosure finding.",
+          solution:"Harden SSH configuration and reduce service metadata exposure.", source:"scanner_export", plugin_id:"100003"
+        }
+      ];
+
+      state.workbookName = "demo_dataset.xlsx";
+      state.workbookSheets = ["Executive Export"];
+      state.rawRows = demo.map((row, idx) => {
+        const r = {
+          ...row,
+          _rowId: cryptoRandomId(),
+          _sheetName:"Executive Export",
+          _sheetRowIndex: idx + 2,
+          known_exploited_bool: truthy(row.known_exploited),
+          ransomware_exploited_bool: truthy(row.ransomware_exploited),
+          severity_norm: normalizeSeverity(row.severity),
+          vpr_score_num: toNumber(row.vpr_score),
+          cvss_base_score_num: toNumber(row.cvss_base_score),
+          age_days_num: toNumber(row.age_days),
+          cve_norm: normalizeCVE(row.cve),
+          sheetName:"Executive Export"
+        };
+        r.kevConfirmed = r.cve_norm ? state.kevMap.has(r.cve_norm) : false;
+        r.kevRecord = r.kevConfirmed ? state.kevMap.get(r.cve_norm) : null;
+        r.riskScore = scoreRow(r);
+        return r;
+      });
+
+      refs.workbookInfo.textContent = `demo_dataset.xlsx parsed across 1 sheet, ${state.rawRows.length} demo rows loaded.`;
+      populateSheetFilter(["Executive Export"]);
+      populateProtocolFilter(state.rawRows);
+      applyFilters();
+      setStatus("Demo dataset loaded");
+    }
+
+    async function handleFile(file){
+      if (!file) return;
+      setStatus("Reading workbook");
+      refs.workbookInfo.textContent = `Reading ${file.name}...`;
+      try{
+        const data = await file.arrayBuffer();
+        const workbook = XLSX.read(data, {type:"array"});
+        parseWorkbook(file.name, workbook);
+      }catch(err){
+        console.error(err);
+        refs.workbookInfo.textContent = `Failed to parse ${file.name}. Ensure it is a valid Excel workbook.`;
+        setStatus("Workbook parse failed");
+        alert("Unable to parse the workbook. Please confirm the file is a valid .xlsx or .xls.");
+      }
+    }
+
+    function bindEvents(){
+      refs.fileInput.addEventListener("change", e => {
+        const file = e.target.files?.[0];
+        handleFile(file);
+      });
+
+      ["dragenter","dragover"].forEach(evt => {
+        refs.uploadZone.addEventListener(evt, e => {
+          e.preventDefault();
+          e.stopPropagation();
+          refs.uploadZone.classList.add("drag");
+        });
+      });
+
+      ["dragleave","drop"].forEach(evt => {
+        refs.uploadZone.addEventListener(evt, e => {
+          e.preventDefault();
+          e.stopPropagation();
+          refs.uploadZone.classList.remove("drag");
+        });
+      });
+
+      refs.uploadZone.addEventListener("drop", e => {
+        const file = e.dataTransfer?.files?.[0];
+        handleFile(file);
+      });
+
+      document.querySelectorAll(".toggle").forEach(toggle => {
+        toggle.addEventListener("click", () => {
+          toggle.classList.toggle("active");
+          const key = toggle.dataset.toggle;
+          state.filters[key] = toggle.classList.contains("active");
+          applyFilters();
+        });
+      });
+
+      refs.applyFiltersBtn.addEventListener("click", applyFilters);
+      refs.resetFiltersBtn.addEventListener("click", resetFilters);
+      refs.exportCsvBtn.addEventListener("click", () => downloadCSV(state.filteredRows));
+      refs.copySummaryBtn.addEventListener("click", copySummary);
+      refs.clearDataBtn.addEventListener("click", clearSession);
+      refs.loadSampleBtn.addEventListener("click", loadSampleData);
+      refs.refreshKevBtn.addEventListener("click", async() => {
+        await fetchKevData();
+        state.rawRows.forEach(r => {
+          r.kevConfirmed = r.cve_norm ? state.kevMap.has(r.cve_norm) : false;
+          r.kevRecord = r.kevConfirmed ? state.kevMap.get(r.cve_norm) : null;
+          r.riskScore = scoreRow(r);
+        });
+        applyFilters();
+      });
+
+      [refs.vprThreshold, refs.severityFilter, refs.protocolFilter, refs.sheetFilter, refs.ageMin, refs.assetSearch].forEach(node => {
+        node.addEventListener("input", applyFilters);
+        node.addEventListener("change", applyFilters);
+      });
+
+      refs.tableSearch.addEventListener("input", applyFilters);
+
+      document.querySelectorAll("thead th[data-sort]").forEach(th => {
+        th.addEventListener("click", () => {
+          const key = th.dataset.sort;
+          if (state.sortKey === key){
+            state.sortDir = state.sortDir === "asc" ? "desc" : "asc";
+          }else{
+            state.sortKey = key;
+            state.sortDir = "desc";
+          }
+          sortRows();
+          renderTable();
+          updateStats();
+        });
+      });
+
+      refs.closeDetailBtn.addEventListener("click", () => refs.detailOverlay.classList.remove("show"));
+      refs.detailOverlay.addEventListener("click", e => {
+        if (e.target === refs.detailOverlay) refs.detailOverlay.classList.remove("show");
+      });
+      document.addEventListener("keydown", e => {
+        if (e.key === "Escape") refs.detailOverlay.classList.remove("show");
+      });
+    }
+
+    async function init(){
+      bindEvents();
+      await fetchKevData();
+      setStatus(state.kevLoaded ? "KEV catalog loaded, awaiting dataset upload" : "Awaiting dataset upload");
+      renderAll();
+    }
+
+    init();
+  </script>
+</body>
+</html>
